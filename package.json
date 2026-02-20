@@ -1,0 +1,59 @@
+{
+  "name": "github-lang-stats",
+  "version": "0.1.0",
+  "description": "CLI that computes per-author GitHub language statistics by sampling commit file changes",
+  "type": "module",
+  "main": "./dist/lib.js",
+  "types": "./dist/lib.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/lib.js",
+      "types": "./dist/lib.d.ts"
+    }
+  },
+  "bin": {
+    "github-lang-stats": "./dist/index.js",
+    "gls": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "biome lint src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@inquirer/checkbox": "^3.0.1",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "ora": "^8.1.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.3",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "github",
+    "statistics",
+    "languages",
+    "cli",
+    "developer",
+    "git"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

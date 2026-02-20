@@ -1,0 +1,108 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**/*.js",
+			"**/*.mjs",
+			"**/*.ts",
+			"**/*.json",
+			"**/*.md",
+			"**/*.html",
+			"**/*.css",
+			"**/*.scss",
+			"**/*.less",
+			"!**/.svelte-kit",
+			"!**/coverage",
+			"!**/build",
+			"!**/dist",
+			"!**/db",
+			"!**/ROUTES.ts",
+			"!**/node_modules"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"trailingCommas": "none"
+		},
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"nursery": {
+				"noFloatingPromises": "error",
+				"noShadow": "warn"
+			},
+			"suspicious": {
+				"noTemplateCurlyInString": "error",
+				"noUnknownAtRules": "warn"
+			},
+			"correctness": {
+				"noUnusedImports": "error"
+			},
+			"style": {
+				"useNodejsImportProtocol": "error",
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"patterns": [
+							{
+								"group": ["*/..", "*/."],
+								"message": "Use direct file paths internally, package names across boundaries"
+							}
+						]
+					}
+				}
+			}
+		}
+	},
+	"vcs": {
+		"clientKind": "git",
+		"enabled": true,
+		"useIgnoreFile": true
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.svelte"],
+			"linter": {
+				"rules": {
+					"style": {
+						"useConst": "off",
+						"useImportType": "on"
+					},
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUnusedImports": "off"
+					}
+				}
+			},
+			"formatter": {
+				"enabled": false
+			}
+		},
+		{
+			"includes": ["**/*.css", "**/*.scss", "**/*.less"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noUnknownAtRules": "off"
+					}
+				}
+			}
+		}
+	]
+}

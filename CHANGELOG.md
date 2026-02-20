@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.2.0...github-lang-stats-v1.3.0) (2026-02-20)
+
+
+### Added
+
+* add GitHub Actions workflow for publishing to npm ([a1cf9b9](https://github.com/smallstack/github-lang-stats/commit/a1cf9b9c417aec1c3aa89ab474fe01a52a9fbd4c))
+
 ## [1.2.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.1.0...github-lang-stats-v1.2.0) (2026-02-20)
 
 

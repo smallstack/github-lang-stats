@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/smallstack/github-lang-stats/compare/v1.0.2...v1.1.0) (2026-02-20)
+
+
+### Features
+
+* make --user optional, resolve login and node ID from token via viewer query ([1329c9f](https://github.com/smallstack/github-lang-stats/commit/1329c9fbc16b87d7eb2199f0dcac8541f0390889))
+
 ## [1.0.2](https://github.com/smallstack/github-lang-stats/compare/v1.0.1...v1.0.2) (2026-02-20)
 
 ### Features

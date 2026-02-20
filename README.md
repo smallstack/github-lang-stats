@@ -148,3 +148,7 @@ The `totals` field maps directly to the `githubLanguageTotals` field in the CV w
 - **Subsequent runs are fast** — only new commits since the last run are fetched.
 - **Exclude infrastructure languages** with `--exclude-langs HCL,Dockerfile` if teammates committed those to repos you also touched.
 - **Adjust concurrency** carefully — GitHub's [secondary rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) may trigger at high concurrency even if your primary limit is not exhausted. `5` is a safe default.
+
+---
+
+Made by [smallstack GmbH](https://smallstack.com) · [GitHub](https://github.com/smallstack/github-lang-stats) · [npm](https://www.npmjs.com/package/github-lang-stats)

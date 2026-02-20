@@ -50,8 +50,23 @@
     "languages",
     "cli",
     "developer",
-    "git"
+    "git",
+    "language-stats",
+    "code-analysis",
+    "contribution-stats"
   ],
+  "author": {
+    "name": "smallstack GmbH",
+    "url": "https://smallstack.com"
+  },
+  "homepage": "https://github.com/smallstack/github-lang-stats#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smallstack/github-lang-stats.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smallstack/github-lang-stats/issues"
+  },
   "license": "MIT",
   "publishConfig": {
     "access": "public"

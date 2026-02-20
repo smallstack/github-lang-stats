@@ -222,13 +222,16 @@ if (!opts.statsOnly) {
 	const done = total - pending;
 
 	if (pending > 0) {
+		const rl0 = client.getRateLimitInfo();
+		const usablePerHour = rl0.limit - rl0.reserved;
 		console.log(
 			`\nFetching commit details: ${chalk.bold(pending)} remaining` +
 				(done > 0 ? chalk.gray(` (${done} already cached)`) : "") +
 				`\n` +
 				chalk.gray(
-					`  Estimated time at 5k req/hr with concurrency=${concurrency}: ` +
-						`~${formatMinutes(pending / (5000 / 60 / 60) / concurrency)}`
+					`  Rate limit: ${rl0.limit}/hr total, ${rl0.reserved} reserved → ${usablePerHour} usable by this tool\n` +
+						`  Estimated time at ${usablePerHour} req/hr with concurrency=${concurrency}: ` +
+						`~${formatMinutes(pending / (usablePerHour / 60 / 60) / concurrency)}`
 				)
 		);
 
@@ -279,9 +282,17 @@ if (!opts.statsOnly) {
 
 			const pct = Math.round(((fetched + errors) / workList.length) * 100);
 			const rl = client.getRateLimitInfo();
+			const rlColor =
+				rl.availableForTool < 200
+					? chalk.red
+					: rl.availableForTool < 500
+						? chalk.yellow
+						: chalk.gray;
 			bar.text =
 				`Fetching ${fetched + errors} / ${workList.length} (${pct}%) — ` +
-				chalk.gray(`rate limit: ${rl.remaining} remaining`);
+				rlColor(
+					`${rl.availableForTool} / ${rl.limit - rl.reserved} req remaining (${rl.reserved} reserved)`
+				);
 		}
 
 		if (!opts.noCache) cache.save();

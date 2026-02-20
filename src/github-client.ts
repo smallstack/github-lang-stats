@@ -3,8 +3,12 @@ import type { CommitDetail, RateLimitInfo, Repo } from "./types.js";
 const GH_REST = "https://api.github.com";
 const GH_GRAPHQL = "https://api.github.com/graphql";
 
+/** Number of requests always kept in reserve so the user still has a buffer after the run */
+const RATE_LIMIT_RESERVE = 100;
+
 export class GitHubClient {
 	private token: string;
+	private rateLimitTotal = 5000;
 	private rateLimitRemaining = 5000;
 	private rateLimitReset = 0;
 
@@ -23,19 +27,23 @@ export class GitHubClient {
 	}
 
 	private updateRateLimitFromHeaders(headers: Headers): void {
+		const limit = headers.get("x-ratelimit-limit");
 		const remaining = headers.get("x-ratelimit-remaining");
 		const reset = headers.get("x-ratelimit-reset");
+		if (limit !== null) this.rateLimitTotal = parseInt(limit, 10);
 		if (remaining !== null) this.rateLimitRemaining = parseInt(remaining, 10);
 		if (reset !== null) this.rateLimitReset = parseInt(reset, 10);
 	}
 
-	/** Wait if we are close to the rate limit */
+	/** Wait if remaining requests would dip into the reserve */
 	private async throttle(): Promise<void> {
-		if (this.rateLimitRemaining <= 10) {
+		if (this.rateLimitRemaining <= RATE_LIMIT_RESERVE) {
 			const now = Math.floor(Date.now() / 1000);
 			const waitSeconds = Math.max(this.rateLimitReset - now + 5, 5);
+			const resetAt = new Date(this.rateLimitReset * 1000).toLocaleTimeString();
 			process.stderr.write(
-				`\nRate limit nearly exhausted. Waiting ${waitSeconds}s for reset...\n`
+				`\nRate limit reserve reached (${this.rateLimitRemaining} remaining, ${RATE_LIMIT_RESERVE} reserved). ` +
+					`Waiting ${waitSeconds}s until reset at ${resetAt}...\n`
 			);
 			await sleep(waitSeconds * 1000);
 		}
@@ -43,8 +51,13 @@ export class GitHubClient {
 
 	getRateLimitInfo(): RateLimitInfo {
 		return {
-			limit: 5000,
+			limit: this.rateLimitTotal,
 			remaining: this.rateLimitRemaining,
+			reserved: RATE_LIMIT_RESERVE,
+			availableForTool: Math.max(
+				0,
+				this.rateLimitRemaining - RATE_LIMIT_RESERVE
+			),
 			reset: this.rateLimitReset
 		};
 	}

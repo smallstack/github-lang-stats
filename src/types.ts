@@ -53,7 +53,14 @@ export interface Cache {
 }
 
 export interface RateLimitInfo {
+	/** Total requests allowed per hour (from x-ratelimit-limit header) */
 	limit: number;
+	/** Requests still available according to GitHub */
 	remaining: number;
-	reset: number; // unix timestamp
+	/** Requests this tool keeps reserved and won't consume */
+	reserved: number;
+	/** Requests available for the tool to use (remaining - reserved) */
+	availableForTool: number;
+	/** Unix timestamp when the rate limit window resets */
+	reset: number;
 }

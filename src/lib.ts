@@ -27,8 +27,13 @@ export type {
 } from "./types.js";
 
 export interface GetGithubLangStatsOptions {
-	/** GitHub username to analyse */
-	user: string;
+	/**
+	 * GitHub username to analyse.
+	 * When omitted, the username is resolved automatically from the token
+	 * via a `viewer` GraphQL query — no extra API call if the token belongs
+	 * to the user being analysed (the common case).
+	 */
+	user?: string;
 	/** GitHub Personal Access Token (needs repo + read:user scopes) */
 	token: string;
 	/**
@@ -76,7 +81,7 @@ export async function getGithubLangStats(
 	options: GetGithubLangStatsOptions
 ): Promise<AggregatedStats> {
 	const {
-		user,
+		user: userOption,
 		token,
 		fromYear = new Date().getFullYear() - 10,
 		excludeLanguages = [],
@@ -88,6 +93,18 @@ export async function getGithubLangStats(
 	} = options;
 
 	const client = new GitHubClient(token);
+
+	// Resolve username (and node ID) from the token if user was not provided
+	let user: string;
+	let cachedAuthorId: string | undefined;
+	if (userOption) {
+		user = userOption;
+	} else {
+		const viewer = await client.getViewer();
+		user = viewer.login;
+		cachedAuthorId = viewer.id;
+	}
+
 	const cPath = cachePath ?? defaultCachePath(user);
 	const cache = new CacheStore(cPath);
 
@@ -120,7 +137,7 @@ export async function getGithubLangStats(
 	);
 
 	if (incompleteRepos.length > 0) {
-		const authorId = await client.getUserNodeId(user);
+		const authorId = cachedAuthorId ?? await client.getUserNodeId(user);
 
 		for (const repo of incompleteRepos) {
 			const shas = await client.collectCommitShas(

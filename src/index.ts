@@ -22,7 +22,7 @@ program
 			"Progress is cached locally so interrupted runs can be resumed."
 	)
 	.version("1.0.0")
-	.requiredOption("-u, --user <username>", "GitHub username")
+	.option("-u, --user <username>", "GitHub username (default: resolved from token via viewer query)")
 	.requiredOption(
 		"-t, --token <pat>",
 		"GitHub Personal Access Token (needs repo + read:user scopes)"
@@ -56,7 +56,7 @@ program
 	.parse(process.argv);
 
 const opts = program.opts<{
-	user: string;
+	user?: string;
 	token: string;
 	output?: string;
 	cache?: string;
@@ -78,7 +78,21 @@ const excludeLanguages = opts.excludeLangs
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
 const client = new GitHubClient(opts.token);
-const cachePath = opts.cache ?? defaultCachePath(opts.user);
+
+// Resolve username (and optionally node ID) from the token if --user was omitted
+let user: string;
+let cachedAuthorId: string | undefined;
+if (opts.user) {
+	user = opts.user;
+} else {
+	const spinner0 = ora("Resolving user from token…").start();
+	const viewer = await client.getViewer();
+	user = viewer.login;
+	cachedAuthorId = viewer.id;
+	spinner0.succeed(`Resolved user: ${chalk.bold(user)}`);
+}
+
+const cachePath = opts.cache ?? defaultCachePath(user);
 const cache = new CacheStore(cachePath);
 
 if (opts.reset) {
@@ -89,7 +103,7 @@ if (opts.reset) {
 
 console.log(
 	chalk.bold(`\ngithub-lang-stats`) +
-		chalk.gray(` — user: ${opts.user}`) +
+		chalk.gray(` — user: ${user}`) +
 		chalk.gray(` — from ${fromYear}`)
 );
 if (!opts.noCache) console.log(chalk.gray(`Cache: ${cachePath}`));
@@ -104,7 +118,7 @@ if (!opts.statsOnly) {
 		).start();
 		let currentYear = 0;
 		const repos = await client.discoverContributedRepos(
-			opts.user,
+			user,
 			fromYear,
 			(year) => {
 				currentYear = year;
@@ -136,9 +150,14 @@ if (!opts.statsOnly) {
 
 		// Use the user's GitHub node ID for reliable author filtering
 		// (email-based filtering misses commits made with different local git emails)
-		const spinner0 = ora("Fetching GitHub user node ID…").start();
-		const authorId = await client.getUserNodeId(opts.user);
-		spinner0.succeed(`Author ID: ${chalk.gray(authorId)}`);
+		const authorId =
+			cachedAuthorId ??
+			await (async () => {
+				const spinner0 = ora("Fetching GitHub user node ID…").start();
+				const id = await client.getUserNodeId(user);
+				spinner0.succeed(`Author ID: ${chalk.gray(id)}`);
+				return id;
+			})();
 
 		let repoIdx = 0;
 		for (const repo of incompleteRepos) {
@@ -310,7 +329,7 @@ console.log(chalk.gray("\nAggregating…"));
 
 const { commitsByRepo, commitDetails } = cache.getAggregationData();
 const stats = aggregate(
-	opts.user,
+	user,
 	commitsByRepo,
 	commitDetails,
 	excludeLanguages

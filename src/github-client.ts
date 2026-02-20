@@ -221,6 +221,17 @@ export class GitHubClient {
 	}
 
 	// ---------------------------------------------------------------------------
+	// Get the authenticated user's login + node ID from the token itself
+	// ---------------------------------------------------------------------------
+
+	async getViewer(): Promise<{ login: string; id: string }> {
+		const data = await this.graphql<{ viewer: { login: string; id: string } }>(
+			`query { viewer { login id } }`
+		);
+		return data.viewer;
+	}
+
+	// ---------------------------------------------------------------------------
 	// Get GitHub user node ID (for reliable author filtering)
 	// ---------------------------------------------------------------------------
 

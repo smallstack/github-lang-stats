@@ -23,6 +23,8 @@ For each file in each commit we count `additions + deletions`. This is a proxy f
 ### npx (no install)
 
 ```sh
+npx github-lang-stats --token=<pat> --output=stats.json
+# or explicitly:
 npx github-lang-stats --user=<github-username> --token=<pat> --output=stats.json
 ```
 
@@ -31,9 +33,9 @@ npx github-lang-stats --user=<github-username> --token=<pat> --output=stats.json
 
 ```sh
 npm i -g github-lang-stats
+gls --token=<pat>
+# or with explicit username:
 gls --user=<github-username> --token=<pat>
-# or the long form:
-github-lang-stats --user=<github-username> --token=<pat>
 ```
 
 
@@ -47,7 +49,7 @@ npm i github-lang-stats
 import { getGithubLangStats, type ProgressEvent } from "github-lang-stats";
 
 const stats = await getGithubLangStats({
-  user: "octocat",
+  // user is optional — resolved automatically from the token if omitted
   token: process.env.GITHUB_TOKEN,
 
   // all fields below are optional
@@ -104,7 +106,7 @@ Commit messages must follow [Conventional Commits](https://www.conventionalcommi
 Usage: gls|github-lang-stats [options]
 
 Options:
-  -u, --user <username>      GitHub username (required)
+  -u, --user <username>      GitHub username (default: resolved from token)
   -t, --token <pat>          GitHub PAT (required)
   -o, --output <path>        Write JSON to file (default: stdout)
   --cache <path>             Override cache file path

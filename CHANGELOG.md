@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.3.0...github-lang-stats-v1.3.1) (2026-02-20)
+
+
+### Fixed
+
+* remove unnecessary command from release workflow ([b3eef04](https://github.com/smallstack/github-lang-stats/commit/b3eef04322c476a33786a85be1a2bbf547cc8deb))
+* update release workflow to include conditional publishing and manifest configuration ([5cb317c](https://github.com/smallstack/github-lang-stats/commit/5cb317cd2e75f1cb0b1f76f27893d5de074fc3fa))
+
 ## [1.3.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.2.0...github-lang-stats-v1.3.0) (2026-02-20)
 
 

@@ -1,16 +1,17 @@
 {
-  "release-type": "node",
   "packages": {
-    ".": {}
-  },
-  "changelog-sections": [
-    { "type": "feat", "section": "### Added" },
-    { "type": "fix", "section": "### Fixed" },
-    { "type": "perf", "section": "### Performance" },
-    { "type": "deps", "section": "### Dependencies" },
-    { "type": "revert", "section": "### Reverted" },
-    { "type": "docs", "section": "### Documentation" },
-    { "type": "chore", "section": "### Miscellaneous" },
-    { "type": "refactor", "section": "### Miscellaneous" }
-  ]
+    ".": {
+      "release-type": "node",
+      "changelog-sections": [
+        { "type": "feat", "section": "Added", "hidden": false },
+        { "type": "fix", "section": "Fixed", "hidden": false },
+        { "type": "perf", "section": "Performance", "hidden": false },
+        { "type": "deps", "section": "Dependencies", "hidden": false },
+        { "type": "revert", "section": "Reverted", "hidden": false },
+        { "type": "docs", "section": "Documentation", "hidden": false },
+        { "type": "chore", "section": "Miscellaneous", "hidden": false },
+        { "type": "refactor", "section": "Miscellaneous", "hidden": false }
+      ]
+    }
+  }
 }

@@ -336,6 +336,7 @@ export class GitHubClient {
 
 		const json = (await res.json()) as {
 			sha: string;
+			commit?: { author?: { date?: string } };
 			files?: Array<{
 				filename: string;
 				additions: number;
@@ -346,6 +347,7 @@ export class GitHubClient {
 
 		return {
 			sha: json.sha,
+			date: json.commit?.author?.date ? Date.parse(json.commit.author.date) : 0,
 			files: (json.files ?? []).map((f) => ({
 				filename: f.filename,
 				additions: f.additions,

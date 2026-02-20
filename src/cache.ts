@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Cache, CommitDetail, Repo } from "./types.js";
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 function emptyCache(): Cache {
 	return {

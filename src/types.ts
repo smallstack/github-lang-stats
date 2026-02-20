@@ -18,6 +18,8 @@ export interface CommitFileDetail {
 
 export interface CommitDetail {
 	sha: string;
+	/** Unix timestamp (ms since epoch) of the commit author date. */
+	date: number;
 	files: CommitFileDetail[];
 }
 

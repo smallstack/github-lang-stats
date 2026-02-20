@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.3.1...github-lang-stats-v1.3.2) (2026-02-20)
+
+
+### Fixed
+
+* update Node.js version to 24 in release workflow ([b2b2604](https://github.com/smallstack/github-lang-stats/commit/b2b2604f52cf2e4e14bd73a9649b0782d2cdaa54))
+
 ## [1.3.1](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.3.0...github-lang-stats-v1.3.1) (2026-02-20)
 
 

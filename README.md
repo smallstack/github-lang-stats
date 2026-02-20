@@ -44,26 +44,52 @@ npm i github-lang-stats
 ```
 
 ```ts
-import { getGithubLangStats } from "github-lang-stats";
+import { getGithubLangStats, type ProgressEvent } from "github-lang-stats";
 
 const stats = await getGithubLangStats({
   user: "octocat",
   token: process.env.GITHUB_TOKEN,
-  fromYear: 2020,              // optional, defaults to 10 years ago
-  excludeLanguages: ["JSON"],  // optional
-  onProgress: (e) => console.log(e),
+
+  // all fields below are optional
+  fromYear: 2020,                        // defaults to 10 years ago
+  excludeLanguages: ["JSON", "YAML"],    // omit languages from totals
+  concurrency: 5,                        // concurrent REST requests (default: 5)
+  cachePath: "./.my-cache/octocat.json", // override default cache location
+  useCache: true,                        // set false to disable caching
+  repos: ["octocat/Hello-World"],        // restrict to specific repos; omit for all
+  onProgress: (e: ProgressEvent) => {
+    if (e.phase === "discover") console.log(e.details);
+    if (e.phase === "shas")    console.log(`${e.repo}: ${e.count} commits`);
+    if (e.phase === "details") console.log(`${e.fetched}/${e.total} commits fetched`);
+    if (e.phase === "aggregate") console.log("Aggregating…");
+  },
 });
 
 console.log(stats.totals); // { TypeScript: 412000, … }
 ```
 
+#### `ProgressEvent` shape
+
+| `phase` | Extra fields | When fired |
+|---|---|---|
+| `"discover"` | `details: string` | Once per year scanned |
+| `"shas"` | `repo: string`, `count: number` | Once per repo after all SHAs collected |
+| `"details"` | `fetched: number`, `total: number` | After every concurrency-batch of REST calls |
+| `"aggregate"` | — | Once, just before the final roll-up |
+
 ### Local development
 
 ```sh
-npm install
-npm run build
+npm install              # also installs the lefthook commit-msg hook
+npm run dev -- --user=<github-username> --token=<pat>   # live run via tsx (no build step)
+npm run build            # compile to dist/
 node dist/index.js --user=<github-username> --token=<pat> --output=stats.json
+npm run lint             # biome lint
+npm run lint:fix         # biome lint + auto-fix
+npm run format           # biome format
 ```
+
+Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/) — `lefthook` enforces this via a `commit-msg` hook. The [Conventional Commits VS Code extension](https://marketplace.visualstudio.com/items?itemName=vivaxy.vscode-conventional-commits) is recommended (`.vscode/extensions.json`).
 
 ## Token scopes required
 

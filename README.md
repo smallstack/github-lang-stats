@@ -4,6 +4,23 @@ CLI that computes **per-author** GitHub language statistics by inspecting the fi
 
 Unlike `GET /repos/{owner}/{repo}/languages` (which returns repo-wide bytes regardless of who wrote them), this tool only counts lines in files **you personally changed**.
 
+## Why use this instead of your GitHub profile?
+
+GitHub's default profile has two major limitations:
+
+### 1. **No language-specific contribution stats**
+GitHub shows your total contributions but doesn't break them down by programming language. This tool gives you accurate, per-language statistics based on your actual code changes.
+
+### 2. **Private repository contributions are invisible**
+Your GitHub profile only displays contributions to public repositories. For developers working primarily on private codebases (common in professional settings), this misrepresents your actual activity.
+
+**This tool solves both problems:**
+- ✅ **Accurate language breakdown** — See exactly how many lines you've changed in TypeScript, Python, Go, etc.
+- ✅ **Safe private repo representation** — Generate aggregate statistics from private repositories without exposing sensitive code or repository names (you control what gets shared in the output)
+- ✅ **Verifiable with your own GitHub token** — Anyone can validate the data by running the tool themselves with their own credentials
+
+Perfect for portfolios, resumes, and demonstrating your real technical expertise.
+
 ## How it works
 
 | Phase | API | Cost | Rate Limit |
@@ -214,10 +231,6 @@ This happens **before** collecting commits, allowing you to filter repos early a
 - **`isPrivate`**: Boolean indicating if the repository is private (always included when available).
 
 When `--exclude-pr-counts` is used, the metadata includes `"excludedPRs": true`.
-
-### Using the output in the CV widget
-
-The `totals` field maps directly to the `githubLanguageTotals` field in the CV widget schema — just copy it in.
 
 ## Tips
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.3.2...github-lang-stats-v1.4.0) (2026-02-21)
+
+
+### Added
+
+* add option to include/exclude commit dates in aggregation output ([ea495fa](https://github.com/smallstack/github-lang-stats/commit/ea495fab6a0a51c7e4d5979d487c0e6bcec68a4c))
+
 ## [1.3.2](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.3.1...github-lang-stats-v1.3.2) (2026-02-20)
 
 

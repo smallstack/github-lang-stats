@@ -4,6 +4,13 @@ CLI that computes **per-author** GitHub language statistics by inspecting the fi
 
 Unlike `GET /repos/{owner}/{repo}/languages` (which returns repo-wide bytes regardless of who wrote them), this tool only counts lines in files **you personally changed**.
 
+## Screenshot
+
+Example of how the output data can be visualized — this chart is from the IndieCV app by smallstack, built on top of the JSON data this tool produces:
+
+[![github-lang-stats screenshot](https://wsrv.nl/?url=https://ltmdiiguvlmrsihp.public.blob.vercel-storage.com/screenshots/github-lang-stats-wide.png&h=300)](https://ltmdiiguvlmrsihp.public.blob.vercel-storage.com/screenshots/github-lang-stats-wide.png)
+
+ 
 ## Why use this instead of your GitHub profile?
 
 GitHub's default profile has two major limitations:

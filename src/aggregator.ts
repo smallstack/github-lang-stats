@@ -1,5 +1,10 @@
 import { detectLanguage, isExcludedLanguage } from "./language-detector.js";
-import type { AggregatedStats, CommitDetail, Repo, RepoStats } from "./types.js";
+import type {
+	AggregatedStats,
+	CommitDetail,
+	Repo,
+	RepoStats
+} from "./types.js";
 
 // We accept the cache data object directly for aggregation
 export function aggregate(
@@ -10,7 +15,8 @@ export function aggregate(
 	includeCommitDates: boolean = true,
 	prCountByRepo: Record<string, number> = {},
 	repos: Repo[] = [],
-	includePRCounts: boolean = true
+	includePRCounts: boolean = true,
+	version?: string
 ): AggregatedStats {
 	const totals: Record<string, number> = {};
 	const byRepo: Record<string, RepoStats> = {};
@@ -36,7 +42,7 @@ export function aggregate(
 			// Collect commit date if requested
 			if (includeCommitDates && detail.date) {
 				const date = new Date(detail.date);
-				const isoDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
+				const isoDate = date.toISOString().split("T")[0]; // YYYY-MM-DD
 				commitDates.push(isoDate);
 			}
 
@@ -92,7 +98,9 @@ export function aggregate(
 			.map(([repo, data]) => {
 				// Sort language entries
 				const sortedLangs = Object.fromEntries(
-					Object.entries(data.contributionsCountPerLanguage).sort(([, a], [, b]) => b - a)
+					Object.entries(data.contributionsCountPerLanguage).sort(
+						([, a], [, b]) => b - a
+					)
 				);
 				// Build result with sorted langs and all optional fields
 				const result: RepoStats = {
@@ -114,6 +122,7 @@ export function aggregate(
 			totalCommitsProcessed,
 			totalRepos: Object.keys(byRepo).length,
 			unit: "lines_changed",
+			...(version ? { version } : {}),
 			...(includePRCounts ? {} : { excludedPRs: true })
 		}
 	};

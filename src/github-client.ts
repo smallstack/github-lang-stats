@@ -118,7 +118,11 @@ export class GitHubClient {
 			if (apiRepos.length === 0) break;
 
 			for (const r of apiRepos) {
-				repos.push({ owner: r.owner.login, name: r.name, isPrivate: r.private });
+				repos.push({
+					owner: r.owner.login,
+					name: r.name,
+					isPrivate: r.private
+				});
 			}
 
 			if (apiRepos.length < perPage) break;
@@ -151,8 +155,8 @@ export class GitHubClient {
 					user: {
 						contributionsCollection: {
 							commitContributionsByRepository: Array<{
-								repository: { 
-									owner: { login: string }; 
+								repository: {
+									owner: { login: string };
 									name: string;
 									isPrivate: boolean;
 								};
@@ -378,11 +382,11 @@ export class GitHubClient {
 	// ---------------------------------------------------------------------------
 	// Fetch PR count for a repository (authored by user)
 	// Uses the search API for efficiency
-	// 
+	//
 	// IMPORTANT: GitHub Search API has a separate rate limit of 30 requests/minute
 	// (not the standard 5000/hour REST API limit). Callers should add ~2s delays
 	// between requests to avoid hitting this limit.
-	// 
+	//
 	// Note: We skip the standard throttle() check here because:
 	// - Search API has its own much lower limit (30/min vs 5000/hr)
 	// - The reserve of 100 would always trigger on Search API (30 < 100)

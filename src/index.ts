@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import checkbox from "@inquirer/checkbox";
 import chalk from "chalk";
@@ -10,6 +10,16 @@ import { CacheStore, defaultCachePath } from "./cache.js";
 import { GitHubClient } from "./github-client.js";
 
 const DEFAULT_FROM_YEAR = new Date().getFullYear() - 10;
+
+// Read package.json version
+let packageVersion: string | undefined;
+try {
+	const packageJsonPath = new URL("../package.json", import.meta.url);
+	const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+	packageVersion = packageJson.version;
+} catch {
+	// If we can't read the version, continue without it
+}
 
 const program = new Command();
 
@@ -22,7 +32,10 @@ program
 			"Progress is cached locally so interrupted runs can be resumed."
 	)
 	.version("1.0.0")
-	.option("-u, --user <username>", "GitHub username (default: resolved from token via viewer query)")
+	.option(
+		"-u, --user <username>",
+		"GitHub username (default: resolved from token via viewer query)"
+	)
 	.requiredOption(
 		"-t, --token <pat>",
 		"GitHub Personal Access Token (needs repo + read:user scopes)"
@@ -127,7 +140,7 @@ let reposToAnalyse = cache.repos;
 if (!opts.statsOnly) {
 	// Always refresh repos when using --select-repos to show newly created repos
 	const needsFreshRepos = cache.repos.length === 0 || opts.selectRepos;
-	
+
 	if (needsFreshRepos) {
 		const spinner = ora(
 			"Discovering contributed repositories (year-by-year)…"
@@ -212,12 +225,12 @@ if (!opts.statsOnly) {
 		// (email-based filtering misses commits made with different local git emails)
 		const authorId =
 			cachedAuthorId ??
-			await (async () => {
+			(await (async () => {
 				const spinner0 = ora("Fetching GitHub user node ID…").start();
 				const id = await client.getUserNodeId(user);
 				spinner0.succeed(`Author ID: ${chalk.gray(id)}`);
 				return id;
-			})();
+			})());
 
 		let repoIdx = 0;
 		for (const repo of incompleteRepos) {
@@ -353,8 +366,12 @@ if (!opts.statsOnly) {
 
 			console.log(
 				`\nCollecting PR counts: ${chalk.bold(incompletePRRepos.length)} remaining` +
-					(alreadyDone > 0 ? chalk.gray(` (${alreadyDone} already cached)`) : "") +
-					chalk.gray(`\n  Note: Search API limited to 30 req/min, this will take ~${Math.ceil(incompletePRRepos.length / 30)} min`)
+					(alreadyDone > 0
+						? chalk.gray(` (${alreadyDone} already cached)`)
+						: "") +
+					chalk.gray(
+						`\n  Note: Search API limited to 30 req/min, this will take ~${Math.ceil(incompletePRRepos.length / 30)} min`
+					)
 			);
 
 			let prRepoIdx = 0;
@@ -366,7 +383,11 @@ if (!opts.statsOnly) {
 			for (const repo of incompletePRRepos) {
 				prRepoIdx++;
 				try {
-					const prCount = await client.fetchPRCount(repo.owner, repo.name, user);
+					const prCount = await client.fetchPRCount(
+						repo.owner,
+						repo.name,
+						user
+					);
 					cache.setPRCount(repo.owner, repo.name, prCount);
 					cache.markRepoPRComplete(repo.owner, repo.name);
 					totalPRCount += prCount;
@@ -380,7 +401,7 @@ if (!opts.statsOnly) {
 
 					// Add delay to respect Search API rate limit (30 req/min = 2s between requests)
 					if (prRepoIdx < incompletePRRepos.length) {
-						await new Promise(r => setTimeout(r, 2000));
+						await new Promise((r) => setTimeout(r, 2000));
 					}
 				} catch (err) {
 					process.stderr.write(
@@ -415,7 +436,8 @@ const stats = aggregate(
 	!opts.excludeCommitDates, // Include by default, exclude if flag is set
 	prCountByRepo,
 	reposToAnalyse,
-	!opts.excludePrCounts // Include by default, exclude if flag is set
+	!opts.excludePrCounts, // Include by default, exclude if flag is set
+	packageVersion
 );
 
 const json = JSON.stringify(stats, null, 2);
@@ -443,7 +465,10 @@ for (const [lang, lines] of topN) {
 // Calculate total PRs if included
 let summaryText = `\nProcessed ${stats.meta.totalCommitsProcessed} commits`;
 if (!opts.excludePrCounts) {
-	const totalPRs = Object.values(prCountByRepo).reduce((sum, count) => sum + count, 0);
+	const totalPRs = Object.values(prCountByRepo).reduce(
+		(sum, count) => sum + count,
+		0
+	);
 	summaryText += `, ${totalPRs} PRs`;
 }
 summaryText += ` across ${stats.meta.totalRepos} repos`;

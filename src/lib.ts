@@ -13,11 +13,23 @@
  * console.log(stats.totals);
  * ```
  */
+import { readFileSync } from "node:fs";
 import { aggregate } from "./aggregator.js";
 import { CacheStore, defaultCachePath } from "./cache.js";
 import { GitHubClient } from "./github-client.js";
 import type { AggregatedStats, Repo } from "./types.js";
 
+// Read package.json version
+let packageVersion: string | undefined;
+try {
+	const packageJsonPath = new URL("../package.json", import.meta.url);
+	const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+	packageVersion = packageJson.version;
+} catch {
+	// If we can't read the version, continue without it
+}
+
+export { GitHubClient } from "./github-client.js";
 export type {
 	AggregatedStats,
 	CommitDetail,
@@ -26,8 +38,6 @@ export type {
 	Repo,
 	RepoStats
 } from "./types.js";
-
-export { GitHubClient } from "./github-client.js";
 
 export interface GetGithubLangStatsOptions {
 	/**
@@ -216,7 +226,7 @@ export async function getGithubLangStats(
 	);
 
 	if (incompleteRepos.length > 0) {
-		const authorId = cachedAuthorId ?? await client.getUserNodeId(user);
+		const authorId = cachedAuthorId ?? (await client.getUserNodeId(user));
 
 		for (const repo of incompleteRepos) {
 			const shas = await client.collectCommitShas(
@@ -283,7 +293,11 @@ export async function getGithubLangStats(
 			let prFetched = 0;
 			for (const repo of incompletePRRepos) {
 				try {
-					const prCount = await client.fetchPRCount(repo.owner, repo.name, user);
+					const prCount = await client.fetchPRCount(
+						repo.owner,
+						repo.name,
+						user
+					);
 					cache.setPRCount(repo.owner, repo.name, prCount);
 					cache.markRepoPRComplete(repo.owner, repo.name);
 					prFetched++;
@@ -295,7 +309,7 @@ export async function getGithubLangStats(
 					});
 					// Add delay to respect Search API rate limit (30 req/min = 2s between requests)
 					if (prFetched < incompletePRRepos.length) {
-						await new Promise(r => setTimeout(r, 2000));
+						await new Promise((r) => setTimeout(r, 2000));
 					}
 				} catch (_err) {
 					// Mark as complete even on error to avoid retrying indefinitely
@@ -324,6 +338,7 @@ export async function getGithubLangStats(
 		includeCommitDates,
 		prCountByRepo,
 		reposToProcess,
-		includePRCounts
+		includePRCounts,
+		packageVersion
 	);
 }

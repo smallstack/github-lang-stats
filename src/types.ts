@@ -51,6 +51,8 @@ export interface AggregatedStats {
 		totalCommitsProcessed: number;
 		totalRepos: number;
 		unit: "lines_changed";
+		/** Version of the tool that generated these stats */
+		version?: string;
 		/** Whether PR data was excluded (false or undefined means PRs were included) */
 		excludedPRs?: boolean;
 	};

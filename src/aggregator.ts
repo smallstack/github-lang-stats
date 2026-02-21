@@ -44,11 +44,10 @@ export function aggregate(
 		}
 
 		if (Object.keys(repoLangs).length > 0) {
-			byRepo[repoKey] = repoLangs;
-			// Add commit dates if collected
-			if (includeCommitDates && commitDates.length > 0) {
-				byRepo[repoKey].commitDates = commitDates;
-			}
+			byRepo[repoKey] = {
+				contributionsCountPerLanguage: repoLangs,
+				...(includeCommitDates && commitDates.length > 0 ? { commitDates } : {})
+			};
 		}
 	}
 
@@ -62,16 +61,15 @@ export function aggregate(
 		Object.entries(byRepo)
 			.sort(([a], [b]) => a.localeCompare(b))
 			.map(([repo, data]) => {
-				// Extract commitDates if present
-				const { commitDates, ...langs } = data;
 				// Sort language entries
 				const sortedLangs = Object.fromEntries(
-					Object.entries(langs).sort(([, a], [, b]) => (b as number) - (a as number))
+					Object.entries(data.contributionsCountPerLanguage).sort(([, a], [, b]) => b - a)
 				);
-				// Re-add commitDates if it existed
-				return commitDates
-					? [repo, { ...sortedLangs, commitDates }]
-					: [repo, sortedLangs];
+				// Build result with sorted langs and optional commitDates
+				return [repo, {
+					contributionsCountPerLanguage: sortedLangs,
+					...(data.commitDates ? { commitDates: data.commitDates } : {})
+				}];
 			})
 	);
 

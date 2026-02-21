@@ -28,10 +28,11 @@ export interface RepoLanguageStats {
 	languages: Record<string, number>;
 }
 
-export type RepoStats = Record<string, number> & {
+export interface RepoStats {
 	/** Optional array of commit dates in ISO format (YYYY-MM-DD) */
 	commitDates?: string[];
-};
+	contributionsCountPerLanguage: Record<string, number>;
+}
 
 export interface AggregatedStats {
 	/** Total lines changed (additions + deletions) per language across all repos */

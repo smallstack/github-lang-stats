@@ -4,13 +4,6 @@ CLI that computes **per-author** GitHub language statistics by inspecting the fi
 
 Unlike `GET /repos/{owner}/{repo}/languages` (which returns repo-wide bytes regardless of who wrote them), this tool only counts lines in files **you personally changed**.
 
-## Screenshot
-
-Example of how the output data can be visualized — this chart is from the IndieCV app by smallstack, built on top of the JSON data this tool produces:
-
-[![github-lang-stats screenshot](https://wsrv.nl/?url=https://ltmdiiguvlmrsihp.public.blob.vercel-storage.com/screenshots/github-lang-stats-wide.png&h=300)](https://ltmdiiguvlmrsihp.public.blob.vercel-storage.com/screenshots/github-lang-stats-wide.png)
-
- 
 ## Why use this instead of your GitHub profile?
 
 GitHub's default profile has two major limitations:
@@ -38,6 +31,11 @@ Perfect for portfolios, resumes, and demonstrating your real technical expertise
 | 4. Collect PR counts (optional) | REST Search API `GET /search/issues` | 1 call per repo | **30/min** |
 
 Progress is cached in `.github-lang-stats-cache/<user>.json` so **interrupted runs resume from where they left off**.
+
+> **⚠️ Former employer / removed from org?**
+> Phase 3 requires **current read access** to each repository. If you've since been removed from a private org or repo, those `GET /commits/:sha` calls will return `404` and no language stats will be collected for that work.
+>
+> **Workaround:** Run the tool while you still have access and keep the cache file. On future runs the tool will use cached data, so your stats remain intact even after access is revoked.
 
 **Note**: PR counts are collected by default starting with Phase 4. Use `--exclude-pr-counts` to skip this phase if you don't need PR data. The Search API has a stricter rate limit (30 requests/minute), so PR collection includes automatic 2-second delays between requests.
 
@@ -246,6 +244,12 @@ When `--exclude-pr-counts` is used, the metadata includes `"excludedPRs": true`.
 - **PR collection is rate-limited** — GitHub's Search API allows only 30 requests/minute (not 5000/hour like the REST API). For 100 repos, PR collection takes ~3-4 minutes. Use `--exclude-pr-counts` to skip if you don't need PR data.
 - **Exclude infrastructure languages** with `--exclude-langs HCL,Dockerfile` if teammates committed those to repos you also touched.
 - **Adjust concurrency** carefully — GitHub's [secondary rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) may trigger at high concurrency even if your primary limit is not exhausted. `5` is a safe default.
+
+## Screenshot
+
+Example of how the output data can be visualized — this chart is from the IndieCV app by smallstack, built on top of the JSON data this tool produces:
+
+[![github-lang-stats screenshot](https://wsrv.nl/?url=https://ltmdiiguvlmrsihp.public.blob.vercel-storage.com/screenshots/github-lang-stats-wide.png&h=300)](https://ltmdiiguvlmrsihp.public.blob.vercel-storage.com/screenshots/github-lang-stats-wide.png)
 
 ---
 

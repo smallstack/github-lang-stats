@@ -67,6 +67,12 @@ export interface GetGithubLangStatsOptions {
 	 * Defaults to `true`.
 	 */
 	includeCommitDates?: boolean;
+	/**
+	 * Include PR counts for activity metrics.
+	 * Adds a `prCount` field to each repo with the number of PRs authored by the user.
+	 * Defaults to `true`.
+	 */
+	includePRCounts?: boolean;
 	/** Optional progress callback invoked as each phase advances. */
 	onProgress?: (event: ProgressEvent) => void;
 }
@@ -75,6 +81,7 @@ export type ProgressEvent =
 	| { phase: "discover"; details: string }
 	| { phase: "shas"; repo: string; count: number }
 	| { phase: "details"; fetched: number; total: number }
+	| { phase: "pr-counts"; fetched: number; total: number }
 	| { phase: "aggregate" };
 
 /**
@@ -97,6 +104,7 @@ export async function getGithubLangStats(
 		useCache = true,
 		repos: repoFilter,
 		includeCommitDates = true,
+		includePRCounts = true,
 		onProgress
 	} = options;
 
@@ -201,6 +209,39 @@ export async function getGithubLangStats(
 		onProgress?.({ phase: "details", fetched, total: workList.length });
 	}
 
+	// ── Phase 3.5: Collect PR counts ────────────────────────────────────────
+
+	if (includePRCounts) {
+		const incompletePRRepos = reposToProcess.filter(
+			(r) => !cache.isRepoPRComplete(r.owner, r.name)
+		);
+
+		if (incompletePRRepos.length > 0) {
+			let prFetched = 0;
+			for (const repo of incompletePRRepos) {
+				try {
+					const prCount = await client.fetchPRCount(repo.owner, repo.name, user);
+					cache.setPRCount(repo.owner, repo.name, prCount);
+					cache.markRepoPRComplete(repo.owner, repo.name);
+					prFetched++;
+					if (useCache) cache.save();
+					onProgress?.({
+						phase: "pr-counts",
+						fetched: prFetched,
+						total: incompletePRRepos.length
+					});
+					// Add delay to respect Search API rate limit (30 req/min = 2s between requests)
+					if (prFetched < incompletePRRepos.length) {
+						await new Promise(r => setTimeout(r, 2000));
+					}
+				} catch (_err) {
+					// Mark as complete even on error to avoid retrying indefinitely
+					cache.markRepoPRComplete(repo.owner, repo.name);
+				}
+			}
+		}
+	}
+
 	// ── Phase 4: Aggregate ──────────────────────────────────────────────────
 
 	onProgress?.({ phase: "aggregate" });
@@ -210,13 +251,16 @@ export async function getGithubLangStats(
 		const key = `${repo.owner}/${repo.name}`;
 		filteredCommitsByRepo[key] = cache.getCommits(repo.owner, repo.name);
 	}
-	const { commitDetails } = cache.getAggregationData();
+	const { commitDetails, prCountByRepo } = cache.getAggregationData();
 
 	return aggregate(
 		user,
 		filteredCommitsByRepo,
 		commitDetails,
 		excludeLanguages,
-		includeCommitDates
+		includeCommitDates,
+		prCountByRepo,
+		reposToProcess,
+		includePRCounts
 	);
 }

@@ -6,13 +6,16 @@ Unlike `GET /repos/{owner}/{repo}/languages` (which returns repo-wide bytes rega
 
 ## How it works
 
-| Phase | API | Cost |
-|---|---|---|
-| 1. Discover repos | GraphQL `contributionsCollection` | ~20 calls (one per year) |
-| 2. Collect commit SHAs per repo | GraphQL `history(author: ...)` | ~1 call per 100 commits |
-| 3. Fetch per-commit file details | REST `GET /repos/:owner/:repo/commits/:sha` | 1 call per commit |
+| Phase | API | Cost | Rate Limit |
+|---|---|---|---|
+| 1. Discover repos | GraphQL `contributionsCollection` | ~20 calls (one per year) | 5,000/hr |
+| 2. Collect commit SHAs per repo | GraphQL `history(author: ...)` | ~1 call per 100 commits | 5,000/hr |
+| 3. Fetch per-commit file details | REST `GET /repos/:owner/:repo/commits/:sha` | 1 call per commit | 5,000/hr |
+| 4. Collect PR counts (optional) | REST Search API `GET /search/issues` | 1 call per repo | **30/min** |
 
 Progress is cached in `.github-lang-stats-cache/<user>.json` so **interrupted runs resume from where they left off**.
+
+**Note**: PR counts are collected by default starting with Phase 4. Use `--exclude-pr-counts` to skip this phase if you don't need PR data. The Search API has a stricter rate limit (30 requests/minute), so PR collection includes automatic 2-second delays between requests.
 
 ## Metric: `lines_changed`
 
@@ -59,10 +62,13 @@ const stats = await getGithubLangStats({
   cachePath: "./.my-cache/octocat.json", // override default cache location
   useCache: true,                        // set false to disable caching
   repos: ["octocat/Hello-World"],        // restrict to specific repos; omit for all
+  includeCommitDates: true,              // include commit dates for heatmaps (default: true)
+  includePRCounts: true,                 // include PR counts for activity metrics (default: true)
   onProgress: (e: ProgressEvent) => {
     if (e.phase === "discover") console.log(e.details);
     if (e.phase === "shas")    console.log(`${e.repo}: ${e.count} commits`);
     if (e.phase === "details") console.log(`${e.fetched}/${e.total} commits fetched`);
+    if (e.phase === "pr-counts") console.log(`${e.fetched}/${e.total} PR counts fetched`);
     if (e.phase === "aggregate") console.log("Aggregating…");
   },
 });
@@ -77,6 +83,7 @@ console.log(stats.totals); // { TypeScript: 412000, … }
 | `"discover"` | `details: string` | Once per year scanned |
 | `"shas"` | `repo: string`, `count: number` | Once per repo after all SHAs collected |
 | `"details"` | `fetched: number`, `total: number` | After every concurrency-batch of REST calls |
+| `"pr-counts"` | `fetched: number`, `total: number` | After each repo's PR count is fetched |
 | `"aggregate"` | — | Once, just before the final roll-up |
 
 ### Local development
@@ -114,6 +121,8 @@ Options:
   --concurrency <n>          Concurrent REST requests (default: 5)
   --from-year <year>         Earliest year to include (default: 10 years ago)
   --exclude-langs <langs>    Comma-separated languages to exclude (e.g. HCL,JSON)
+  --exclude-commit-dates     Exclude commit dates from output (included by default)
+  --exclude-pr-counts        Exclude PR counts from output (included by default)
   --select-repos             Interactively pick repos to analyse after commit counts are known
   --stats-only               Re-aggregate from cache without fetching new data
   --reset                    Delete cache and start fresh
@@ -123,16 +132,18 @@ Options:
 
 ### `--select-repos` interactive picker
 
-When passed, after all commit SHAs have been collected the tool shows a full-screen
-checkbox list sorted by **number of commits** (highest first). All repos are pre-selected:
+When passed, after discovering repositories the tool shows a full-screen
+checkbox list sorted alphabetically. All repos are pre-selected:
 
 ```
-? Choose repos (42 total, sorted by commit count)
-❯◉ myorg/monorepo                                       1 248 commits
- ◉ myorg/frontend                                         832 commits
- ◉ octocat/personal-site                                  201 commits
+? Choose repos (42 total)
+❯◉ myorg/frontend
+ ◉ myorg/monorepo
+ ◉ octocat/personal-site
  ...
 ```
+
+This happens **before** collecting commits, allowing you to filter repos early and save time.
 
 | Key | Action |
 |-----|--------|
@@ -152,8 +163,13 @@ checkbox list sorted by **number of commits** (highest first). All repos are pre
   },
   "byRepo": {
     "myorg/myrepo": {
-      "TypeScript": 200000,
-      "CSS": 5000
+      "contributionsCountPerLanguage": {
+        "TypeScript": 200000,
+        "CSS": 5000
+      },
+      "commitDates": ["2025-11-15", "2025-11-16"],
+      "prCount": 42,
+      "isPrivate": false
     }
   },
   "meta": {
@@ -166,6 +182,14 @@ checkbox list sorted by **number of commits** (highest first). All repos are pre
 }
 ```
 
+### Optional fields in `byRepo`
+
+- **`commitDates`**: Array of ISO date strings (YYYY-MM-DD), included by default. Use `--exclude-commit-dates` to omit.
+- **`prCount`**: Number of pull requests authored by the user in this repository, included by default. Use `--exclude-pr-counts` to omit.
+- **`isPrivate`**: Boolean indicating if the repository is private (always included when available).
+
+When `--exclude-pr-counts` is used, the metadata includes `"excludedPRs": true`.
+
 ### Using the output in the CV widget
 
 The `totals` field maps directly to the `githubLanguageTotals` field in the CV widget schema — just copy it in.
@@ -174,6 +198,7 @@ The `totals` field maps directly to the `githubLanguageTotals` field in the CV w
 
 - **First run is slow** — at 5k req/hr with 30k commits it can take hours. Let it run overnight; it saves progress every 50 commits.
 - **Subsequent runs are fast** — only new commits since the last run are fetched.
+- **PR collection is rate-limited** — GitHub's Search API allows only 30 requests/minute (not 5000/hour like the REST API). For 100 repos, PR collection takes ~3-4 minutes. Use `--exclude-pr-counts` to skip if you don't need PR data.
 - **Exclude infrastructure languages** with `--exclude-langs HCL,Dockerfile` if teammates committed those to repos you also touched.
 - **Adjust concurrency** carefully — GitHub's [secondary rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) may trigger at high concurrency even if your primary limit is not exhausted. `5` is a safe default.
 

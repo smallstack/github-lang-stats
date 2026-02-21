@@ -113,11 +113,12 @@ export class GitHubClient {
 				full_name: string;
 				owner: { login: string };
 				name: string;
+				private: boolean;
 			}>;
 			if (apiRepos.length === 0) break;
 
 			for (const r of apiRepos) {
-				repos.push({ owner: r.owner.login, name: r.name });
+				repos.push({ owner: r.owner.login, name: r.name, isPrivate: r.private });
 			}
 
 			if (apiRepos.length < perPage) break;
@@ -150,7 +151,11 @@ export class GitHubClient {
 					user: {
 						contributionsCollection: {
 							commitContributionsByRepository: Array<{
-								repository: { owner: { login: string }; name: string };
+								repository: { 
+									owner: { login: string }; 
+									name: string;
+									isPrivate: boolean;
+								};
 							}>;
 						};
 					};
@@ -163,6 +168,7 @@ export class GitHubClient {
                   repository {
                     owner { login }
                     name
+                    isPrivate
                   }
                 }
               }
@@ -178,7 +184,8 @@ export class GitHubClient {
 					if (!repoMap.has(key)) {
 						repoMap.set(key, {
 							owner: entry.repository.owner.login,
-							name: entry.repository.name
+							name: entry.repository.name,
+							isPrivate: entry.repository.isPrivate
 						});
 					}
 				}
@@ -366,6 +373,50 @@ export class GitHubClient {
 				status: f.status
 			}))
 		};
+	}
+
+	// ---------------------------------------------------------------------------
+	// Fetch PR count for a repository (authored by user)
+	// Uses the search API for efficiency
+	// 
+	// IMPORTANT: GitHub Search API has a separate rate limit of 30 requests/minute
+	// (not the standard 5000/hour REST API limit). Callers should add ~2s delays
+	// between requests to avoid hitting this limit.
+	// ---------------------------------------------------------------------------
+
+	async fetchPRCount(
+		owner: string,
+		repo: string,
+		username: string
+	): Promise<number> {
+		await this.throttle();
+		// Search for PRs authored by user in this repo
+		const query = `author:${username} type:pr repo:${owner}/${repo}`;
+		const url = `${GH_REST}/search/issues?q=${encodeURIComponent(query)}&per_page=1`;
+		const res = await fetch(url, { headers: this.headers() });
+		this.updateRateLimitFromHeaders(res.headers);
+
+		if (res.status === 404 || res.status === 422) return 0;
+		if (!res.ok) {
+			if (res.status === 429 || res.status === 403) {
+				// Secondary rate limit — wait and retry once
+				const retryAfter = parseInt(res.headers.get("retry-after") ?? "60", 10);
+				process.stderr.write(
+					`\nSecondary rate limit hit. Waiting ${retryAfter}s...\n`
+				);
+				await sleep(retryAfter * 1000);
+				return this.fetchPRCount(owner, repo, username);
+			}
+			throw new Error(
+				`fetchPRCount failed (${res.status}) for ${owner}/${repo}`
+			);
+		}
+
+		const json = (await res.json()) as {
+			total_count: number;
+		};
+
+		return json.total_count;
 	}
 }
 

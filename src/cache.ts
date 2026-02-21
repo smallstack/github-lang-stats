@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Cache, CommitDetail, Repo } from "./types.js";
 
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 function emptyCache(): Cache {
 	return {
@@ -10,7 +10,9 @@ function emptyCache(): Cache {
 		repos: [],
 		completedRepos: [],
 		commitsByRepo: {},
-		commitDetails: {}
+		commitDetails: {},
+		prCountByRepo: {},
+		completedPRRepos: []
 	};
 }
 
@@ -122,16 +124,44 @@ export class CacheStore {
 	getAggregationData(): {
 		commitsByRepo: Record<string, string[]>;
 		commitDetails: Record<string, CommitDetail | null>;
+		prCountByRepo: Record<string, number>;
 	} {
 		return {
 			commitsByRepo: this.data.commitsByRepo,
-			commitDetails: this.data.commitDetails
+			commitDetails: this.data.commitDetails,
+			prCountByRepo: this.data.prCountByRepo ?? {}
 		};
 	}
 
 	/** Clear all cached data */
 	reset(): void {
 		this.data = emptyCache();
+	}
+
+	// ─── PR Count Methods ─────────────────────────────────────────────────────
+
+	isRepoPRComplete(owner: string, repo: string): boolean {
+		const key = `${owner}/${repo}`;
+		return (this.data.completedPRRepos ?? []).includes(key);
+	}
+
+	markRepoPRComplete(owner: string, repo: string): void {
+		const key = `${owner}/${repo}`;
+		if (!this.data.completedPRRepos) this.data.completedPRRepos = [];
+		if (!this.data.completedPRRepos.includes(key)) {
+			this.data.completedPRRepos.push(key);
+		}
+	}
+
+	getPRCount(owner: string, repo: string): number | undefined {
+		const key = `${owner}/${repo}`;
+		return this.data.prCountByRepo?.[key];
+	}
+
+	setPRCount(owner: string, repo: string, count: number): void {
+		const key = `${owner}/${repo}`;
+		if (!this.data.prCountByRepo) this.data.prCountByRepo = {};
+		this.data.prCountByRepo[key] = count;
 	}
 }
 

@@ -1,6 +1,7 @@
 export interface Repo {
 	owner: string;
 	name: string;
+	isPrivate?: boolean;
 }
 
 export interface CommitSha {
@@ -32,6 +33,10 @@ export interface RepoStats {
 	/** Optional array of commit dates in ISO format (YYYY-MM-DD) */
 	commitDates?: string[];
 	contributionsCountPerLanguage: Record<string, number>;
+	/** PR count for this repository, included by default unless --exclude-pr-counts */
+	prCount?: number;
+	/** Repository privacy status */
+	isPrivate?: boolean;
 }
 
 export interface AggregatedStats {
@@ -46,6 +51,8 @@ export interface AggregatedStats {
 		totalCommitsProcessed: number;
 		totalRepos: number;
 		unit: "lines_changed";
+		/** Whether PR data was excluded (false or undefined means PRs were included) */
+		excludedPRs?: boolean;
 	};
 }
 
@@ -58,6 +65,10 @@ export interface Cache {
 	commitsByRepo: Record<string, string[]>;
 	/** Map of "<sha>" → CommitDetail (or null if 404/error) */
 	commitDetails: Record<string, CommitDetail | null>;
+	/** Map of "owner/repo" → PR count */
+	prCountByRepo?: Record<string, number>;
+	/** Repos whose PR counts have been fully collected */
+	completedPRRepos?: string[];
 }
 
 export interface RateLimitInfo {

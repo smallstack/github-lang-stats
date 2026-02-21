@@ -57,6 +57,10 @@ program
 		"--exclude-commit-dates",
 		"Exclude commit dates from output (dates are included by default for heatmap visualization)"
 	)
+	.option(
+		"--exclude-pr-counts",
+		"Exclude PR counts from output (PR counts are included by default for activity metrics)"
+	)
 	.parse(process.argv);
 
 const opts = program.opts<{
@@ -72,6 +76,7 @@ const opts = program.opts<{
 	statsOnly: boolean;
 	reset: boolean;
 	excludeCommitDates: boolean;
+	excludePrCounts: boolean;
 }>();
 
 const concurrency = parseInt(opts.concurrency, 10);
@@ -142,6 +147,47 @@ if (!opts.statsOnly) {
 		);
 	}
 
+	// ─── Phase 1.5: Interactive repo selection ────────────────────────────────────
+
+	if (opts.selectRepos) {
+		const repoEntries = cache.repos
+			.map((r) => ({
+				repo: r,
+				key: `${r.owner}/${r.name}`
+			}))
+			.sort((a, b) => a.key.localeCompare(b.key));
+
+		console.log(
+			`\n${chalk.bold("Select repositories to analyse")} ` +
+				chalk.gray("(space=toggle, a=toggle all, i=invert, enter=confirm)\n")
+		);
+
+		const selected = await checkbox({
+			message: `Choose repos (${repoEntries.length} total)`,
+			choices: repoEntries.map(({ key }) => ({
+				name: key,
+				value: key,
+				checked: true
+			})),
+			pageSize: 20,
+			loop: false
+		});
+
+		if (selected.length === 0) {
+			console.log(chalk.red("No repositories selected — nothing to do."));
+			process.exit(0);
+		}
+
+		const selectedSet = new Set(selected);
+		cache.repos = cache.repos.filter((r) =>
+			selectedSet.has(`${r.owner}/${r.name}`)
+		);
+		console.log(
+			chalk.green(`✓`) +
+				` Analysing ${chalk.bold(cache.repos.length)} selected repos\n`
+		);
+	}
+
 	// ─── Phase 2: Collect commit SHAs per repo ──────────────────────────────────
 
 	const incompleteRepos = cache.repos.filter(
@@ -195,48 +241,6 @@ if (!opts.statsOnly) {
 		}
 	} else {
 		console.log(`${chalk.green(`✓`)} All repo commit SHAs already cached`);
-	}
-
-	// ─── Phase 2.5: Interactive repo selection ────────────────────────────────────
-
-	if (opts.selectRepos) {
-		const repoEntries = cache.repos
-			.map((r) => ({
-				repo: r,
-				key: `${r.owner}/${r.name}`,
-				count: cache.getCommits(r.owner, r.name).length
-			}))
-			.sort((a, b) => b.count - a.count);
-
-		console.log(
-			`\n${chalk.bold("Select repositories to analyse")} ` +
-				chalk.gray("(space=toggle, a=toggle all, i=invert, enter=confirm)\n")
-		);
-
-		const selected = await checkbox({
-			message: `Choose repos (${repoEntries.length} total, sorted by commit count)`,
-			choices: repoEntries.map(({ key, count }) => ({
-				name: `${key.padEnd(55)} ${chalk.gray(`${String(count).padStart(5)} commits`)}`,
-				value: key,
-				checked: true
-			})),
-			pageSize: 20,
-			loop: false
-		});
-
-		if (selected.length === 0) {
-			console.log(chalk.red("No repositories selected — nothing to do."));
-			process.exit(0);
-		}
-
-		const selectedSet = new Set(selected);
-		cache.repos = cache.repos.filter((r) =>
-			selectedSet.has(`${r.owner}/${r.name}`)
-		);
-		console.log(
-			chalk.green(`✓`) +
-				` Analysing ${chalk.bold(cache.repos.length)} selected repos\n`
-		);
 	}
 
 	// ─── Phase 3: Fetch commit file details (REST) ──────────────────────────────
@@ -326,19 +330,83 @@ if (!opts.statsOnly) {
 			`${chalk.green(`✓`)} All commit details already cached (${total} commits)`
 		);
 	}
+
+	// ─── Phase 3.5: Collect PR counts ────────────────────────────────────────────
+
+	if (!opts.excludePrCounts) {
+		const incompletePRRepos = cache.repos.filter(
+			(r) => !cache.isRepoPRComplete(r.owner, r.name)
+		);
+
+		if (incompletePRRepos.length > 0) {
+			const totalPRRepos = cache.repos.length;
+			const alreadyDone = totalPRRepos - incompletePRRepos.length;
+
+			console.log(
+				`\nCollecting PR counts: ${chalk.bold(incompletePRRepos.length)} remaining` +
+					(alreadyDone > 0 ? chalk.gray(` (${alreadyDone} already cached)`) : "") +
+					chalk.gray(`\n  Note: Search API limited to 30 req/min, this will take ~${Math.ceil(incompletePRRepos.length / 30)} min`)
+			);
+
+			let prRepoIdx = 0;
+			let totalPRCount = 0;
+			const prBar = ora(
+				`Collecting PR counts 0 / ${incompletePRRepos.length}…`
+			).start();
+
+			for (const repo of incompletePRRepos) {
+				prRepoIdx++;
+				try {
+					const prCount = await client.fetchPRCount(repo.owner, repo.name, user);
+					cache.setPRCount(repo.owner, repo.name, prCount);
+					cache.markRepoPRComplete(repo.owner, repo.name);
+					totalPRCount += prCount;
+
+					if (!opts.noCache && prRepoIdx % 10 === 0) {
+						cache.save();
+					}
+
+					const pct = Math.round((prRepoIdx / incompletePRRepos.length) * 100);
+					prBar.text = `Collecting PR counts ${prRepoIdx} / ${incompletePRRepos.length} (${pct}%)`;
+
+					// Add delay to respect Search API rate limit (30 req/min = 2s between requests)
+					if (prRepoIdx < incompletePRRepos.length) {
+						await new Promise(r => setTimeout(r, 2000));
+					}
+				} catch (err) {
+					process.stderr.write(
+						`\n  Warning: failed to fetch PR count for ${repo.owner}/${repo.name}: ${String(err)}\n`
+					);
+					// Mark as complete even on error to avoid retrying indefinitely
+					cache.markRepoPRComplete(repo.owner, repo.name);
+				}
+			}
+
+			if (!opts.noCache) cache.save();
+			prBar.succeed(
+				`Collected PR counts for ${chalk.bold(incompletePRRepos.length)} repos (${totalPRCount} PRs total)`
+			);
+		} else {
+			console.log(`${chalk.green(`✓`)} All PR counts already cached`);
+		}
+	}
 }
 
 // ─── Phase 4: Aggregate ───────────────────────────────────────────────────────
 
 console.log(chalk.gray("\nAggregating…"));
 
-const { commitsByRepo, commitDetails } = cache.getAggregationData();
+const { commitsByRepo, commitDetails, prCountByRepo } =
+	cache.getAggregationData();
 const stats = aggregate(
 	user,
 	commitsByRepo,
 	commitDetails,
 	excludeLanguages,
-	!opts.excludeCommitDates // Include by default, exclude if flag is set
+	!opts.excludeCommitDates, // Include by default, exclude if flag is set
+	prCountByRepo,
+	cache.repos,
+	!opts.excludePrCounts // Include by default, exclude if flag is set
 );
 
 const json = JSON.stringify(stats, null, 2);
@@ -363,11 +431,18 @@ for (const [lang, lines] of topN) {
 	console.log(`  ${lang.padEnd(20)} ${bar.padEnd(20)} ${formatNum(lines)}`);
 }
 
-console.log(
-	chalk.gray(
-		`\nProcessed ${stats.meta.totalCommitsProcessed} commits across ${stats.meta.totalRepos} repos`
-	)
-);
+// Calculate total PRs if included
+let summaryText = `\nProcessed ${stats.meta.totalCommitsProcessed} commits`;
+if (!opts.excludePrCounts) {
+	const totalPRs = Object.values(prCountByRepo).reduce((sum, count) => sum + count, 0);
+	summaryText += `, ${totalPRs} PRs`;
+}
+summaryText += ` across ${stats.meta.totalRepos} repos`;
+if (opts.excludePrCounts) {
+	summaryText += ` (PR collection skipped)`;
+}
+
+console.log(chalk.gray(summaryText));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

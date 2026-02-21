@@ -1,5 +1,5 @@
 import { detectLanguage, isExcludedLanguage } from "./language-detector.js";
-import type { AggregatedStats, CommitDetail, RepoStats } from "./types.js";
+import type { AggregatedStats, CommitDetail, Repo, RepoStats } from "./types.js";
 
 // We accept the cache data object directly for aggregation
 export function aggregate(
@@ -7,12 +7,21 @@ export function aggregate(
 	commitsByRepo: Record<string, string[]>,
 	commitDetails: Record<string, CommitDetail | null>,
 	excludeLanguages: string[] = [],
-	includeCommitDates: boolean = true
+	includeCommitDates: boolean = true,
+	prCountByRepo: Record<string, number> = {},
+	repos: Repo[] = [],
+	includePRCounts: boolean = true
 ): AggregatedStats {
 	const totals: Record<string, number> = {};
 	const byRepo: Record<string, RepoStats> = {};
 
 	let totalCommitsProcessed = 0;
+
+	// Build a repo map for quick lookup of isPrivate
+	const repoMap = new Map<string, Repo>();
+	for (const repo of repos) {
+		repoMap.set(`${repo.owner}/${repo.name}`, repo);
+	}
 
 	for (const [repoKey, shas] of Object.entries(commitsByRepo)) {
 		const repoLangs: Record<string, number> = {};
@@ -44,10 +53,30 @@ export function aggregate(
 		}
 
 		if (Object.keys(repoLangs).length > 0) {
-			byRepo[repoKey] = {
-				contributionsCountPerLanguage: repoLangs,
-				...(includeCommitDates && commitDates.length > 0 ? { commitDates } : {})
+			const repoData: RepoStats = {
+				contributionsCountPerLanguage: repoLangs
 			};
+
+			// Add commit dates if enabled
+			if (includeCommitDates && commitDates.length > 0) {
+				repoData.commitDates = commitDates;
+			}
+
+			// Add PR count if enabled and available
+			if (includePRCounts) {
+				const prCount = prCountByRepo[repoKey];
+				if (prCount !== undefined) {
+					repoData.prCount = prCount;
+				}
+			}
+
+			// Add isPrivate if available
+			const repo = repoMap.get(repoKey);
+			if (repo?.isPrivate !== undefined) {
+				repoData.isPrivate = repo.isPrivate;
+			}
+
+			byRepo[repoKey] = repoData;
 		}
 	}
 
@@ -65,11 +94,14 @@ export function aggregate(
 				const sortedLangs = Object.fromEntries(
 					Object.entries(data.contributionsCountPerLanguage).sort(([, a], [, b]) => b - a)
 				);
-				// Build result with sorted langs and optional commitDates
-				return [repo, {
-					contributionsCountPerLanguage: sortedLangs,
-					...(data.commitDates ? { commitDates: data.commitDates } : {})
-				}];
+				// Build result with sorted langs and all optional fields
+				const result: RepoStats = {
+					contributionsCountPerLanguage: sortedLangs
+				};
+				if (data.commitDates) result.commitDates = data.commitDates;
+				if (data.prCount !== undefined) result.prCount = data.prCount;
+				if (data.isPrivate !== undefined) result.isPrivate = data.isPrivate;
+				return [repo, result];
 			})
 	);
 
@@ -81,7 +113,8 @@ export function aggregate(
 			generatedAt: new Date().toISOString(),
 			totalCommitsProcessed,
 			totalRepos: Object.keys(byRepo).length,
-			unit: "lines_changed"
+			unit: "lines_changed",
+			...(includePRCounts ? {} : { excludedPRs: true })
 		}
 	};
 }

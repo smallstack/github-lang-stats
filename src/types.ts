@@ -28,11 +28,16 @@ export interface RepoLanguageStats {
 	languages: Record<string, number>;
 }
 
+export type RepoStats = Record<string, number> & {
+	/** Optional array of commit dates in ISO format (YYYY-MM-DD) */
+	commitDates?: string[];
+};
+
 export interface AggregatedStats {
 	/** Total lines changed (additions + deletions) per language across all repos */
 	totals: Record<string, number>;
-	/** Per-repo breakdown: { "owner/repo": { TypeScript: 1234, ... } } */
-	byRepo: Record<string, Record<string, number>>;
+	/** Per-repo breakdown: { "owner/repo": { TypeScript: 1234, ..., commitDates?: ["2025-11-15", ...] } } */
+	byRepo: Record<string, RepoStats>;
 	/** Metadata */
 	meta: {
 		user: string;

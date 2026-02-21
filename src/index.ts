@@ -53,6 +53,10 @@ program
 		"Skip fetching new data, just aggregate from existing cache"
 	)
 	.option("--reset", "Delete cache and start fresh")
+	.option(
+		"--exclude-commit-dates",
+		"Exclude commit dates from output (dates are included by default for heatmap visualization)"
+	)
 	.parse(process.argv);
 
 const opts = program.opts<{
@@ -67,6 +71,7 @@ const opts = program.opts<{
 	selectRepos: boolean;
 	statsOnly: boolean;
 	reset: boolean;
+	excludeCommitDates: boolean;
 }>();
 
 const concurrency = parseInt(opts.concurrency, 10);
@@ -332,7 +337,8 @@ const stats = aggregate(
 	user,
 	commitsByRepo,
 	commitDetails,
-	excludeLanguages
+	excludeLanguages,
+	!opts.excludeCommitDates // Include by default, exclude if flag is set
 );
 
 const json = JSON.stringify(stats, null, 2);

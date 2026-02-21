@@ -23,7 +23,8 @@ export type {
 	CommitDetail,
 	CommitFileDetail,
 	RateLimitInfo,
-	Repo
+	Repo,
+	RepoStats
 } from "./types.js";
 
 export interface GetGithubLangStatsOptions {
@@ -60,6 +61,12 @@ export interface GetGithubLangStatsOptions {
 	 * When omitted, all discovered repos are processed.
 	 */
 	repos?: string[];
+	/**
+	 * Include commit dates for heatmap visualization.
+	 * Adds a `commitDates` array to each repo with ISO date strings (YYYY-MM-DD).
+	 * Defaults to `true`.
+	 */
+	includeCommitDates?: boolean;
 	/** Optional progress callback invoked as each phase advances. */
 	onProgress?: (event: ProgressEvent) => void;
 }
@@ -89,6 +96,7 @@ export async function getGithubLangStats(
 		cachePath,
 		useCache = true,
 		repos: repoFilter,
+		includeCommitDates = true,
 		onProgress
 	} = options;
 
@@ -208,6 +216,7 @@ export async function getGithubLangStats(
 		user,
 		filteredCommitsByRepo,
 		commitDetails,
-		excludeLanguages
+		excludeLanguages,
+		includeCommitDates
 	);
 }

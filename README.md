@@ -76,6 +76,31 @@ const stats = await getGithubLangStats({
 console.log(stats.totals); // { TypeScript: 412000, … }
 ```
 
+#### List repositories only
+
+If you just want to get a list of all repositories the user has contributed to (without collecting commit stats):
+
+```ts
+import { listRepositories } from "github-lang-stats";
+
+const repos = await listRepositories({
+  token: process.env.GITHUB_TOKEN,
+  // Optional fields:
+  user: "octocat",         // omit to use token's user
+  fromYear: 2020,          // defaults to 10 years ago
+  onProgress: (year) => console.log(`Scanning ${year}...`),
+});
+
+console.log(repos);
+// [
+//   { owner: "octocat", name: "Hello-World", isPrivate: false },
+//   { owner: "octocat", name: "my-private-repo", isPrivate: true },
+//   ...
+// ]
+```
+
+This is useful for building UI selectors or filtering repos before running the full analysis.
+
 #### `ProgressEvent` shape
 
 | `phase` | Extra fields | When fired |

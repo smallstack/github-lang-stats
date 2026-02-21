@@ -16,7 +16,7 @@
 import { aggregate } from "./aggregator.js";
 import { CacheStore, defaultCachePath } from "./cache.js";
 import { GitHubClient } from "./github-client.js";
-import type { AggregatedStats } from "./types.js";
+import type { AggregatedStats, Repo } from "./types.js";
 
 export type {
 	AggregatedStats,
@@ -26,6 +26,8 @@ export type {
 	Repo,
 	RepoStats
 } from "./types.js";
+
+export { GitHubClient } from "./github-client.js";
 
 export interface GetGithubLangStatsOptions {
 	/**
@@ -83,6 +85,67 @@ export type ProgressEvent =
 	| { phase: "details"; fetched: number; total: number }
 	| { phase: "pr-counts"; fetched: number; total: number }
 	| { phase: "aggregate" };
+
+export interface ListRepositoriesOptions {
+	/**
+	 * GitHub username to discover repos for.
+	 * When omitted, the username is resolved automatically from the token.
+	 */
+	user?: string;
+	/** GitHub Personal Access Token (needs repo + read:user scopes) */
+	token: string;
+	/**
+	 * Earliest year to scan for contributions.
+	 * Defaults to **10 years ago** from the current year.
+	 */
+	fromYear?: number;
+	/** Optional progress callback invoked as each year is scanned. */
+	onProgress?: (year: number) => void;
+}
+
+/**
+ * List all repositories the user has contributed to.
+ *
+ * This combines two discovery methods:
+ * 1. REST API: All repos the user owns, collaborates on, or is an org member of
+ * 2. GraphQL: Public repos contributed to via PRs (year-by-year scan)
+ *
+ * @returns Array of repositories with owner, name, and privacy status
+ *
+ * @example
+ * ```ts
+ * import { listRepositories } from "github-lang-stats";
+ *
+ * const repos = await listRepositories({
+ *   token: process.env.GITHUB_TOKEN!,
+ *   fromYear: 2020,
+ * });
+ * console.log(repos); // [{ owner: "octocat", name: "hello-world", isPrivate: false }, ...]
+ * ```
+ */
+export async function listRepositories(
+	options: ListRepositoriesOptions
+): Promise<Repo[]> {
+	const {
+		user: userOption,
+		token,
+		fromYear = new Date().getFullYear() - 10,
+		onProgress
+	} = options;
+
+	const client = new GitHubClient(token);
+
+	// Resolve username from the token if not provided
+	let user: string;
+	if (userOption) {
+		user = userOption;
+	} else {
+		const viewer = await client.getViewer();
+		user = viewer.login;
+	}
+
+	return client.discoverContributedRepos(user, fromYear, onProgress);
+}
 
 /**
  * Fetch GitHub language statistics for the given user programmatically.

@@ -121,8 +121,14 @@ console.log();
 
 // ─── Phase 1: Discover repos ──────────────────────────────────────────────────
 
+// Keep full repo list in cache, use separate variable for selected repos
+let reposToAnalyse = cache.repos;
+
 if (!opts.statsOnly) {
-	if (cache.repos.length === 0) {
+	// Always refresh repos when using --select-repos to show newly created repos
+	const needsFreshRepos = cache.repos.length === 0 || opts.selectRepos;
+	
+	if (needsFreshRepos) {
 		const spinner = ora(
 			"Discovering contributed repositories (year-by-year)…"
 		).start();
@@ -146,6 +152,9 @@ if (!opts.statsOnly) {
 				` Using cached repo list: ${chalk.bold(cache.repos.length)} repos`
 		);
 	}
+
+	// Update working repo list
+	reposToAnalyse = cache.repos;
 
 	// ─── Phase 1.5: Interactive repo selection ────────────────────────────────────
 
@@ -179,18 +188,18 @@ if (!opts.statsOnly) {
 		}
 
 		const selectedSet = new Set(selected);
-		cache.repos = cache.repos.filter((r) =>
+		reposToAnalyse = cache.repos.filter((r) =>
 			selectedSet.has(`${r.owner}/${r.name}`)
 		);
 		console.log(
 			chalk.green(`✓`) +
-				` Analysing ${chalk.bold(cache.repos.length)} selected repos\n`
+				` Analysing ${chalk.bold(reposToAnalyse.length)} selected repos\n`
 		);
 	}
 
 	// ─── Phase 2: Collect commit SHAs per repo ──────────────────────────────────
 
-	const incompleteRepos = cache.repos.filter(
+	const incompleteRepos = reposToAnalyse.filter(
 		(r) => !cache.isRepoComplete(r.owner, r.name)
 	);
 
@@ -266,7 +275,7 @@ if (!opts.statsOnly) {
 		// Build work list: [{owner, repo, sha}, ...]
 		type Work = { owner: string; repo: string; sha: string };
 		const workList: Work[] = [];
-		for (const repo of cache.repos) {
+		for (const repo of reposToAnalyse) {
 			const shas = cache.getCommits(repo.owner, repo.name);
 			for (const sha of shas) {
 				if (!cache.hasCommitDetail(sha)) {
@@ -334,12 +343,12 @@ if (!opts.statsOnly) {
 	// ─── Phase 3.5: Collect PR counts ────────────────────────────────────────────
 
 	if (!opts.excludePrCounts) {
-		const incompletePRRepos = cache.repos.filter(
+		const incompletePRRepos = reposToAnalyse.filter(
 			(r) => !cache.isRepoPRComplete(r.owner, r.name)
 		);
 
 		if (incompletePRRepos.length > 0) {
-			const totalPRRepos = cache.repos.length;
+			const totalPRRepos = reposToAnalyse.length;
 			const alreadyDone = totalPRRepos - incompletePRRepos.length;
 
 			console.log(
@@ -405,7 +414,7 @@ const stats = aggregate(
 	excludeLanguages,
 	!opts.excludeCommitDates, // Include by default, exclude if flag is set
 	prCountByRepo,
-	cache.repos,
+	reposToAnalyse,
 	!opts.excludePrCounts // Include by default, exclude if flag is set
 );
 

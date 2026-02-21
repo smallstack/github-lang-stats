@@ -382,6 +382,11 @@ export class GitHubClient {
 	// IMPORTANT: GitHub Search API has a separate rate limit of 30 requests/minute
 	// (not the standard 5000/hour REST API limit). Callers should add ~2s delays
 	// between requests to avoid hitting this limit.
+	// 
+	// Note: We skip the standard throttle() check here because:
+	// - Search API has its own much lower limit (30/min vs 5000/hr)
+	// - The reserve of 100 would always trigger on Search API (30 < 100)
+	// - We have retry logic for 429/403 and callers add manual delays
 	// ---------------------------------------------------------------------------
 
 	async fetchPRCount(
@@ -389,7 +394,7 @@ export class GitHubClient {
 		repo: string,
 		username: string
 	): Promise<number> {
-		await this.throttle();
+		// Don't call this.throttle() - Search API has separate rate limit
 		// Search for PRs authored by user in this repo
 		const query = `author:${username} type:pr repo:${owner}/${repo}`;
 		const url = `${GH_REST}/search/issues?q=${encodeURIComponent(query)}&per_page=1`;

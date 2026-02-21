@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.4.0...github-lang-stats-v1.5.0) (2026-02-21)
+
+
+### Added
+
+* add listRepositories function to retrieve user contributions and repository details ([3aae0f6](https://github.com/smallstack/github-lang-stats/commit/3aae0f6de44aba6d83dba085ae863f9856d8960c))
+* add support for PR counts and repository privacy status in aggregation ([3066341](https://github.com/smallstack/github-lang-stats/commit/3066341972ba12a4fdfb4911b06938fe08ea698c))
+
+
+### Documentation
+
+* enhance README with explanation of tool advantages over GitHub profile ([9c90eae](https://github.com/smallstack/github-lang-stats/commit/9c90eaeeb5ab6093bc2977d40d5f4c49ae039c7c))
+
+
+### Miscellaneous
+
+* **typing:** :zap: Refactor RepoStats to match new requirements ([374cdde](https://github.com/smallstack/github-lang-stats/commit/374cddef185e4f44522fbbfc9f55d02e92e9625b))
+
 ## [1.4.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.3.2...github-lang-stats-v1.4.0) (2026-02-21)
 
 

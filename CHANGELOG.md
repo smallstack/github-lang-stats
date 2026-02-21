@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.6.0...github-lang-stats-v1.6.1) (2026-02-21)
+
+
+### Documentation
+
+* add screenshot section to README for visualizing output data ([1648ddb](https://github.com/smallstack/github-lang-stats/commit/1648ddb656eb65561ef5105559fda41457e543e9))
+* update README to reposition screenshot section and clarify cache usage ([56ce38e](https://github.com/smallstack/github-lang-stats/commit/56ce38e62a21c7e953388bea530f9e8b5a89ce66))
+
 ## [1.6.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.5.0...github-lang-stats-v1.6.0) (2026-02-21)
 
 

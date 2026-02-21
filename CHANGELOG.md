@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.5.0...github-lang-stats-v1.6.0) (2026-02-21)
+
+
+### Added
+
+* add package version to aggregated stats and update related functions ([0c312b6](https://github.com/smallstack/github-lang-stats/commit/0c312b69caefd3b1a440082f01d33b9dc1ebe66b))
+
 ## [1.5.0](https://github.com/smallstack/github-lang-stats/compare/github-lang-stats-v1.4.0...github-lang-stats-v1.5.0) (2026-02-21)
 
 

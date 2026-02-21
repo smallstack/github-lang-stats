@@ -1,6 +1,6 @@
 {
   "name": "github-lang-stats",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "CLI that computes per-author GitHub language statistics by sampling commit file changes",
   "type": "module",
   "main": "./dist/lib.js",
